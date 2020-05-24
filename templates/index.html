@@ -1,0 +1,76 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Flask-SocketIO Example</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/cs.css') }}">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
+            integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+    </script>
+</head>
+<body>
+<div class="jumbotron jumbotron-fluid" style="background:transparent !important;">
+    <div class="container">
+        <div class="row">
+            <h3>Let's play game!</h3>
+        </div>
+        <!--navigaton tab-->
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" data-toggle="tab" href="#home">Create Room</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#create">Join Room</a>
+            </li>
+        </ul>
+        <div class="tab-content">
+            <div id="home" class="container tab-pane active"><br>
+                <form id="createroom" method="POST" action="#">
+                    {{ createroomform.hidden_tag() }}
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ createroomform.name.label }}<br>
+                            {{ createroomform.name(class='form-control', required=False) }}
+                            {% for message in createroomform.name.errors %}
+                                <div class="invalid-feedback d-block">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {{ createroomform.createroom(class="btn btn-outline-secondary") }}
+                </form>
+            </div>
+            <div id="create" class="container tab-pane fade"><br>
+                <form id="joinroom" method="POST" action="#">
+                    {{ joinform.hidden_tag() }}
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ joinform.name.label }}<br>
+                            {{ joinform.name(class='form-control', required=False) }}
+                            {% for message in joinform.name.errors %}
+                                <div class="invalid-feedback d-block">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ joinform.roomnumber.label }}<br>
+                            {{ joinform.roomnumber(class='form-control', required=False) }}
+                            {% for message in joinform.roomnumber.errors %}
+                                <div class="invalid-feedback d-block">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {{ joinform.joinroom(class="btn btn-outline-secondary") }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

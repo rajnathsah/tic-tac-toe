@@ -1,0 +1,241 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Flask-SocketIO Example</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/cs.css') }}">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
+            integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+        $(document).ready(function () {
+            // Use a "/test" namespace.
+            // An application can open a connection on multiple namespaces, and
+            // Socket.IO will multiplex all those connections on a single
+            // physical channel. If you don't care about multiple channels, you
+            // can set the namespace to an empty string.
+            namespace = '/test';
+
+            // Connect to the Socket.IO server.
+            // The connection URL has the following format, relative to the current page:
+            //     http[s]://<domain>:<port>[/<namespace>]
+            var socket = io(namespace);
+
+            // Event handler for new connections.
+            // The callback function is invoked when a connection with the
+            // server is established.
+            socket.on('connect', function () {
+                //socket.emit('my_event', {data: 'I\'m connected!'});
+            });
+
+            // Event handler for server sent data.
+            // The callback function is invoked whenever the server emits data
+            // to the client. The data is then displayed in the "Received"
+            // section of the page.
+            socket.on('my_response', function (msg, cb) {
+                $('#log').append('<br>' + $('<div/>').text('Received #' + msg.count + ': ' + msg.data).html());
+                $("#" + msg.data).val(msg.tictac);
+                if (cb)
+                    cb();
+            });
+
+            socket.on('my_result', function (msg, cb) {
+                $("#res").append('Result: ' + msg.result)
+                $("#game").find('input').attr('disabled','disabled')
+                if (cb)
+                    cb();
+            });
+
+            // Interval function that tests message latency by sending a "ping"
+            // message. The server then responds with a "pong" message and the
+            // round trip time is measured.
+            var ping_pong_times = [];
+            var start_time;
+            window.setInterval(function () {
+                start_time = (new Date).getTime();
+                socket.emit('my_ping');
+            }, 1000);
+
+            // Handler for the "pong" message. When the pong is received, the
+            // time from the ping is stored, and the average of the last 30
+            // samples is average and displayed.
+            socket.on('my_pong', function () {
+                var latency = (new Date).getTime() - start_time;
+                ping_pong_times.push(latency);
+                ping_pong_times = ping_pong_times.slice(-30); // keep last 30 samples
+                var sum = 0;
+                for (var i = 0; i < ping_pong_times.length; i++)
+                    sum += ping_pong_times[i];
+                $('#ping-pong').text(Math.round(10 * sum / ping_pong_times.length) / 10);
+            });
+
+            // Handlers for the different forms in the page.
+            // These accept data from the user and send it to the server in a
+            // variety of ways
+            $('form#emit').submit(function (event) {
+                socket.emit('my_event', {data: $('#emit_data').val()});
+                return false;
+            });
+            /*
+            $('input[type="submit"]').click(function () {
+                //alert('You clicked button with ID:' + this.id);
+                //alert({{ room }})
+                socket.emit('my_broadcast_event', {data: this.id});
+                return false;
+            });
+            */
+
+            $(document).ready(function(){
+                //alert({{ room }});
+                //alert('O');
+                //alert("{{ playersymbol }}");
+                socket.emit('join', {room: {{ room|int }}});
+                return false;
+            });
+
+
+            $('input[type="submit"]').click(function () {
+                //alert({{ room }})
+                //alert({{ playersymbol }});
+                socket.emit('my_room_event', {room: {{ room }}, data: this.id, playersymbol:"{{ playersymbol }}" });
+                return false;
+            });
+
+
+            $('form#broadcast1').submit(function (event) {
+                socket.emit('my_broadcast_event', {data: 'btn1'});
+                return false;
+            });
+
+            $('form#join').submit(function (event) {
+                socket.emit('join', {room: $('#join_room').val()});
+                return false;
+            });
+            $('form#leave').submit(function (event) {
+                socket.emit('leave', {room: $('#leave_room').val()});
+                return false;
+            });
+            $('form#send_room').submit(function (event) {
+                socket.emit('my_room_event', {room: $('#room_name').val(), data: $('#room_data').val()});
+                return false;
+            });
+            $('form#close').submit(function (event) {
+                socket.emit('close_room', {room: $('#close_room').val()});
+                return false;
+            });
+            $('form#disconnect').submit(function (event) {
+                socket.emit('disconnect_request');
+                return false;
+            });
+
+            $('#vote1').on('click', function () {
+                socket.emit('vote', 1)
+            });
+
+            $('#vote2').on('click', function () {
+                socket.emit('vote', 2)
+            });
+
+            socket.on('vote_results', function (results) {
+                var total_votes = results.results1 + results.results2;
+                var one_pct = Math.round(results.results1 / total_votes * 100);
+                var two_pct = 100 - one_pct;
+
+                $('#results1').css('width', one_pct + '%');
+                $('#results2').css('width', two_pct + '%');
+            });
+        });
+    </script>
+    <style type="text/css">
+        body {
+            /*background: url('img\\img11.jpg') no-repeat center center fixed;*/
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            background-size: cover;
+            -o-background-size: cover;
+        }
+
+        .btn-xl {
+            /*padding: 10px 25px;*/
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="jumbotron jumbotron-fluid" style="background:transparent !important;">
+    <div class="container">
+        <!--
+        <h1>Flask-SocketIO Test</h1>
+        <p>Async mode is: <b>{{ async_mode }}</b></p>
+        <p>Average ping/pong latency: <b><span id="ping-pong"></span>ms</b></p>
+
+        <div class="row">
+            <button id="vote1">vote1</button>
+            <button id="vote2">vote2</button>
+        </div>
+        <div class="row progress">
+            <div id="results1" class="progress-bar progress-bar-success" style="width: 50%">
+            </div>
+            <div id="results2" class="progress-bar progress-bar-warning progress-bar-striped" style="width: 50%">
+            </div>
+        </div>-->
+        <div class="row">
+            <h2>Tic Tac Toe</h2>
+        </div>
+        <br/>
+        <div class="row">
+            <h2>Hello {{ player }} - {{ playersymbol }}</h2>
+        </div>
+        <div class="row">
+            <h3>Room Number: {{ room }}</h3>
+        </div>
+        <br/>
+        <div class="row" id="res">
+        </div>
+        <div class="newgame">
+            <a href="{{ url_for('index') }}">Home</a>
+        </div>
+        <form id="broadcast" method="POST" action='#'>
+            <!--
+            <div class="form-row">
+                <div class="form-group col-md-3 w-75 col-sm-10">
+                    <input type="text" class="form-control" name="broadcast_data" id="broadcast_data"
+                           placeholder="Message">
+                </div>
+            </div>
+            <input type="submit" class="btn btn-outline-secondary" value="Broadcast">
+            -->
+            <div id="game">
+                <div class="row">
+                    <input type="submit" id="btn1" class="btn btn-outline-secondary btn-xl" value="">
+                    <input type="submit" id="btn2" class="btn btn-outline-secondary btn-xl" value="">
+                    <input type="submit" id="btn3" class="btn btn-outline-secondary btn-xl" value="">
+                </div>
+                <div class="row">
+                    <input type="submit" id="btn4" class="btn btn-outline-secondary btn-xl" value="">
+                    <input type="submit" id="btn5" class="btn btn-outline-secondary btn-xl" value="">
+                    <input type="submit" id="btn6" class="btn btn-outline-secondary btn-xl" value="">
+                </div>
+                <div class="row">
+                    <input type="submit" id="btn7" class="btn btn-outline-secondary btn-xl" value="">
+                    <input type="submit" id="btn8" class="btn btn-outline-secondary btn-xl" value="">
+                    <input type="submit" id="btn9" class="btn btn-outline-secondary btn-xl" value="">
+                </div>
+            </div>
+        </form>
+        <div class="row">
+            <h2>Receive:</h2>
+        </div>
+        <div class="row" id="log">
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>
