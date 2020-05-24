@@ -28,8 +28,9 @@ thread_lock = Lock()
 global turn
 turn = None
 
+#global board
 board = {1: '', 2: '', 3: '', 4: '', 5: '', 6: '', 7: '', 8: '', 9: ''}
-
+global userboard
 userboard = {}
 
 def check_winner(room, board):
@@ -197,6 +198,12 @@ def close(message):
 @socketio.on('my_room_event', namespace='/test')
 def send_room_message(message):
 
+    rightwrong = False
+    global userboard
+    #global board
+
+    userboard.clear()
+
     userboard = {message['room']: board}
     pos = message['data'].replace('btn','')
     print(message['data'].replace('btn',''))
@@ -209,69 +216,89 @@ def send_room_message(message):
 
     try:
         mytictactoe = TicTac.query.get_or_404(message['room'])
-        col = 'mytictactoe.col{}="{}"'.format(pos,turn)
-        print(col)
-        exec(col)
 
         if mytictactoe.turn is None and turn == 'O':
+            col = 'mytictactoe.col{}="{}"'.format(pos, turn)
+            print(col)
+            exec(col)
             col = 'mytictactoe.turn="{}"'.format('X')
             exec(col)
-        elif mytictactoe.turn == 'O':
+            db.session.commit()
+            rightwrong = True
+        elif mytictactoe.turn == 'O' and mytictactoe.turn == 'O':
+            col = 'mytictactoe.col{}="{}"'.format(pos, turn)
+            print(col)
+            exec(col)
             col = 'mytictactoe.turn="{}"'.format('X')
             exec(col)
-        elif mytictactoe.turn == 'X':
+            db.session.commit()
+            rightwrong = True
+        elif mytictactoe.turn == 'X' and mytictactoe.turn == 'X':
+            col = 'mytictactoe.col{}="{}"'.format(pos, turn)
+            print(col)
+            exec(col)
             col = 'mytictactoe.turn="{}"'.format('O')
             exec(col)
+            db.session.commit()
+            rightwrong = True
+        else:
+            print('Wrong turn')
+            rightwrong = False
 
-        db.session.commit()
+
         print(mytictactoe)
     except Exception as ex:
         print('Error in room: {}. {}'.format(message['room'], ex))
 
     print('button: {}'.format(message['data']))
 
-    emit('my_response',
-         {'data': message['data'], 'count': session['receive_count'], 'tictac': turn},
-         room=message['room'])
+    if rightwrong:
+        emit('my_response',
+             {'data': message['data'], 'count': session['receive_count'], 'tictac': turn},
+             room=message['room'])
+    else:
+        emit('my_result',
+             {'result': 'Wrong Turn: {}, Try again!'.format(turn)},
+             room=message['room'])
 
+    if rightwrong:
+        try:
+            mytictactoe = TicTac.query.get_or_404(message['room'])
+            #print(mytictactoe.__dict__)
+            #print(type(mytictactoe))
+            userboard[message['room']][1] = mytictactoe.col1
+            userboard[message['room']][2] = mytictactoe.col2
+            userboard[message['room']][3] = mytictactoe.col3
+            userboard[message['room']][4] = mytictactoe.col4
+            userboard[message['room']][5] = mytictactoe.col5
+            userboard[message['room']][6] = mytictactoe.col6
+            userboard[message['room']][7] = mytictactoe.col7
+            userboard[message['room']][8] = mytictactoe.col8
+            userboard[message['room']][9] = mytictactoe.col9
 
-    try:
-        mytictactoe = TicTac.query.get_or_404(message['room'])
-        #print(mytictactoe.__dict__)
-        #print(type(mytictactoe))
-        userboard[message['room']][1] = mytictactoe.col1
-        userboard[message['room']][2] = mytictactoe.col2
-        userboard[message['room']][3] = mytictactoe.col3
-        userboard[message['room']][4] = mytictactoe.col4
-        userboard[message['room']][5] = mytictactoe.col5
-        userboard[message['room']][6] = mytictactoe.col6
-        userboard[message['room']][7] = mytictactoe.col7
-        userboard[message['room']][8] = mytictactoe.col8
-        userboard[message['room']][9] = mytictactoe.col9
+        except Exception as ex:
+            print('Error in query :{}'.format(message['room']))
 
-    except Exception as ex:
-        print('Error in query :{}'.format(message['room']))
+        print(len([item for item in userboard[message['room']].values() if item !='']))
+        numOfRound = len([item for item in userboard[message['room']].values() if item is not None])
 
-    print(len([item for item in userboard[message['room']].values() if item !='']))
-    numOfRound = len([item for item in userboard[message['room']].values() if item is not None])
+        if numOfRound >= 5:
+            winner = check_winner(message['room'],userboard)
+            print('Round check')
+            print(winner)
+            if winner is not None:
+                if winner[0] == True:
+                    print('Hey {}, you won'.format(winner[1]))
 
-    if numOfRound >= 5:
-        winner = check_winner(message['room'],userboard)
-        print('Round check')
-        print(winner)
-        if winner is not None:
-            if winner[0] == True:
-                print('Hey {}, you won'.format(winner[1]))
+                    emit('my_result',
+                         {'result': 'Hey {}, you won'.format(winner[1])},
+                         room=message['room'])
 
+            if numOfRound >= 9 and winner is None:
+                print('Its draw!')
                 emit('my_result',
-                     {'result': 'Hey {}, you won'.format(winner[1])},
+                     {'result': 'Draw, Try again!'},
                      room=message['room'])
-
-        if numOfRound >= 9 and winner is None:
-            print('Its draw!')
-            emit('my_result',
-                 {'result': 'Draw, Try again!'},
-                 room=message['room'])
 
     print(userboard)
     print(message)
